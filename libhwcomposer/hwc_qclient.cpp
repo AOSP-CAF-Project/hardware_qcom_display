@@ -645,6 +645,7 @@ status_t QClient::notifyCallback(uint32_t command, const Parcel* inParcel,
         case IQService::GET_DISPLAY_ATTRIBUTES_FOR_CONFIG:
             ret = getDisplayAttributesForConfig(mHwcContext, inParcel,
                     outParcel);
+            break;
         case IQService::QDCM_SVC_CMDS:
             qdcmCmdsHandler(mHwcContext, inParcel, outParcel);
             break;
