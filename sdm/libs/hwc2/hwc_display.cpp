@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -581,6 +581,9 @@ int HWCDisplay::Deinit() {
     delete hwc_layer;
   }
 
+  // Close fbt release fence.
+  close(fbt_release_fence_);
+
   if (color_mode_) {
     color_mode_->DeInit();
     delete color_mode_;
@@ -780,7 +783,8 @@ void HWCDisplay::BuildLayerStack() {
   }
 
   // TODO(user): Set correctly when SDM supports geometry_changes as bitmask
-  layer_stack_.flags.geometry_changed = UINT32(geometry_changes_ > 0);
+  layer_stack_.flags.geometry_changed = UINT32((geometry_changes_ ||
+                                                geometry_changes_on_doze_suspend_) > 0);
   layer_stack_.flags.config_changed = !validated_;
 
   // Append client target to the layer stack
@@ -1247,7 +1251,8 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
       validated_ = false;
       break;
     }
-    case kThermalEvent: {
+    case kThermalEvent:
+    case kIdlePowerCollapse: {
       SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[id_]);
       validated_ = false;
     } break;
@@ -1261,8 +1266,6 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
               id_);
       }
     } break;
-    case kIdlePowerCollapse:
-      break;
     default:
       DLOGW("Unknown event: %d", event);
       break;
@@ -1295,6 +1298,7 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
     } else if (error == kErrorPermission) {
       WaitOnPreviousFence();
       MarkLayersForGPUBypass();
+      geometry_changes_on_doze_suspend_ |= geometry_changes_;
     } else {
       DLOGE("Prepare failed. Error = %d", error);
       // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
@@ -1307,6 +1311,9 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
       callbacks_->Refresh(id_);
       return HWC2::Error::BadDisplay;
     }
+  } else {
+    // clear geometry_changes_on_doze_suspend_ on successful prepare.
+    geometry_changes_on_doze_suspend_ = GeometryChanges::kNone;
   }
 
   for (auto hwc_layer : layer_set_) {
@@ -2280,6 +2287,7 @@ bool HWCDisplay::CanSkipValidate() {
   }
 
   if (!layer_set_.empty() && !display_intf_->CanSkipValidate()) {
+    DLOGV_IF(kTagClient, "Display needs validation %d", id_);
     return false;
   }
 
