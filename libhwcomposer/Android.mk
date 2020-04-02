@@ -7,9 +7,8 @@ LOCAL_MODULE                  := hwcomposer.$(TARGET_BOARD_PLATFORM)
 LOCAL_MODULE_RELATIVE_PATH    := hw
 LOCAL_VENDOR_MODULE           := true
 LOCAL_MODULE_TAGS             := optional
-LOCAL_HEADER_LIBRARIES	      := libui_headers
-LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes) \
-                                 frameworks/native/libs/arect/include
+LOCAL_HEADER_LIBRARIES	      := libui_headers display_headers generated_kernel_headers
+LOCAL_C_INCLUDES              := frameworks/native/libs/arect/include $(common_includes)
 
 ifeq ($(strip $(TARGET_USES_QCOM_DISPLAY_PP)),true)
 LOCAL_C_INCLUDES              += $(TARGET_OUT_HEADERS)/qdcm/inc \
@@ -21,7 +20,7 @@ LOCAL_SHARED_LIBRARIES        := $(common_libs) libEGL liboverlay \
                                  libhdmi libqdutils libhardware_legacy \
                                  libdl libmemalloc libqservice libsync \
                                  libbinder libdisplayconfig \
-                                 libbfqio_vendor
+                                 libbfqio
 
 LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdhwcomposer\" -Wno-absolute-value \
                                  -Wno-float-conversion -Wno-unused-parameter
