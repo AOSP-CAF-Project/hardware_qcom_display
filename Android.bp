@@ -9,6 +9,7 @@ cc_defaults {
         "-Wall",
         "-Werror",
         "-std=c++14",
+	"-Wno-sign-conversion",
     ],
     shared_libs: [
         "liblog",
